@@ -1,0 +1,274 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-green-dark: #1a2e1f;
+  --color-brand-green: #2d5016;
+  --color-brand-green-mid: #3d6b1e;
+  --color-brand-green-light: #5a8a2f;
+  --color-brand-gold: #c9a84c;
+  --color-brand-gold-light: #e8c96d;
+  --color-brand-gold-pale: #f5e9c0;
+  --color-brand-brown: #7c4a1a;
+  --color-brand-brown-light: #a86432;
+  --color-brand-bg: #faf7f2;
+  --color-brand-bg-warm: #f5f0e8;
+  --color-brand-cream: #ede0cc;
+  --color-brand-text: #1c1c1c;
+  --color-brand-muted: #5a5a5a;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--color-brand-text);
+    background: var(--color-brand-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #f5f0e8; }
+::-webkit-scrollbar-thumb { background: #c9a84c; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #a8872a; }
+
+/* ─── Custom Scrollbar Inline ────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar { width: 3px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #c9a84c44; border-radius: 4px; }
+
+/* ─── Animations ─────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10%  { transform: translate(-2%, -3%); }
+  30%  { transform: translate(3%, 2%); }
+  50%  { transform: translate(-1%, 4%); }
+  70%  { transform: translate(2%, -2%); }
+  90%  { transform: translate(-3%, 1%); }
+}
+
+.animate-fadeInUp   { animation: fadeInUp 0.7s ease-out forwards; }
+.animate-fadeIn     { animation: fadeIn 0.5s ease-out forwards; }
+.animate-slideDown  { animation: slideDown 0.35s ease-out forwards; }
+.animate-float      { animation: float 5s ease-in-out infinite; }
+.animate-scaleIn    { animation: scaleIn 0.4s ease-out forwards; }
+
+.delay-100  { animation-delay: 0.1s; }
+.delay-200  { animation-delay: 0.2s; }
+.delay-300  { animation-delay: 0.3s; }
+.delay-400  { animation-delay: 0.4s; }
+.delay-500  { animation-delay: 0.5s; }
+
+/* ─── Grain Texture Overlay ──────────────────────────── */
+.grain::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  animation: grain 8s steps(10) infinite;
+  z-index: 1000;
+}
+
+/* ─── Glass Effect ───────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.glass-dark {
+  background: rgba(26, 46, 31, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Gold Shimmer Text ──────────────────────────────── */
+.gold-shimmer {
+  background: linear-gradient(90deg, #c9a84c, #f5e9c0, #c9a84c, #a8872a);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 5s linear infinite;
+}
+
+/* ─── Premium Gradient ───────────────────────────────── */
+.hero-gradient {
+  background: radial-gradient(ellipse at 70% 50%, #e8f0de 0%, #faf7f2 55%, #f5ede0 100%);
+}
+.section-gradient {
+  background: linear-gradient(160deg, #faf7f2 0%, #f0ead8 100%);
+}
+
+/* ─── Button ─────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: var(--color-brand-green);
+  color: white;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-brand-green-dark);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.btn-primary:hover::before { transform: scaleX(1); }
+.btn-primary span { position: relative; z-index: 1; }
+.btn-primary > * { position: relative; z-index: 1; }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: transparent;
+  color: var(--color-brand-green);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: 1.5px solid var(--color-brand-green);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-outline:hover {
+  background: var(--color-brand-green);
+  color: white;
+}
+
+/* ─── Card Hover ─────────────────────────────────────── */
+.product-card {
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.4s ease;
+}
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+}
+
+/* ─── Input ──────────────────────────────────────────── */
+.input-premium {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: white;
+  border: 1.5px solid #e5ddd0;
+  color: var(--color-brand-text);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-premium:focus {
+  border-color: var(--color-brand-green);
+  box-shadow: 0 0 0 3px rgba(45, 80, 22, 0.08);
+}
+.input-premium.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.08);
+}
+
+/* ─── Section Divider ────────────────────────────────── */
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+.ornament::before, .ornament::after {
+  content: '';
+  flex: 1;
+  max-width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c9a84c);
+}
+.ornament::after {
+  background: linear-gradient(90deg, #c9a84c, transparent);
+}
+
+/* ─── Toast ──────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.875rem 1.5rem;
+  background: var(--color-brand-green-dark);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-left: 3px solid var(--color-brand-gold);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  animation: fadeInUp 0.35s ease-out;
+  white-space: nowrap;
+}
