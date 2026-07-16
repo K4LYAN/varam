@@ -74,11 +74,19 @@ function OrderDetail({ order, onClose, onStatusChange }: { order: Order; onClose
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 10, padding: 16 }}>
           <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>Order Items</div>
           {(Array.isArray(order.items) ? order.items : []).map((item: any, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <div>
-                <div style={{ color: '#f5e9c0', fontSize: 12, fontWeight: 500 }}>Item #{item.id}</div>
-                <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 11 }}>Qty: {item.quantity}</div>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              {item.image && (
+                <img src={item.image} alt={item.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, background: '#1c1c1c' }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#f5e9c0', fontSize: 12, fontWeight: 500 }}>{item.name || `Item #${item.id}`}</div>
+                <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 11 }}>Qty: {item.quantity} {item.price ? `• ₹${item.price}` : ''}</div>
               </div>
+              {item.price && (
+                <div style={{ color: '#f5e9c0', fontSize: 12, fontWeight: 600 }}>
+                  ₹{item.price * item.quantity}
+                </div>
+              )}
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginTop: 4 }}>

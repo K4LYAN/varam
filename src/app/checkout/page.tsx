@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Package, CreditCard, ShieldCheck, ArrowLeft, Info } from 'lucide-react';
+import { Package, CreditCard, ShieldCheck, ArrowLeft, Info, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
-import { createRazorpayOrder } from '../actions/payment';
+import { createRazorpayOrder, createCODOrder } from '../actions/payment';
 
 declare global {
   interface Window { Razorpay: any; }
@@ -15,10 +15,20 @@ const inputCls = "input-premium";
 const labelCls = "block text-[10px] font-bold tracking-[0.2em] uppercase text-[#5a5a5a] mb-2";
 
 export default function Checkout() {
-  const { cart, getCartTotal, user, showToast } = useAppContext();
+  const { cart, getCartTotal, user, showToast, clearCart, refreshOrders } = useAppContext();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    address: '',
+    city: '',
+    pincode: '',
+    phone: '',
+    email: '',
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -27,6 +37,23 @@ export default function Checkout() {
     s.async = true;
     document.body.appendChild(s);
   }, []);
+
+  useEffect(() => {
+    if (user && !selectedAddressId) {
+      if (user.addresses && user.addresses.length > 0) {
+        const defaultAddr = user.addresses.find((a: any) => a.isDefault) || user.addresses[0];
+        handleAddressSelect(defaultAddr.id);
+      } else {
+        setSelectedAddressId('new');
+        setFormData(prev => ({
+          ...prev,
+          fullName: user.name || '',
+          phone: user.phone || '',
+          email: user.email || '',
+        }));
+      }
+    }
+  }, [user]);
 
   const subtotal = getCartTotal();
   const shipping = subtotal >= 999 ? 0 : 50;
@@ -37,6 +64,32 @@ export default function Checkout() {
     return null;
   }
 
+  const handleAddressSelect = (id: string) => {
+    setSelectedAddressId(id);
+    if (id === 'new') {
+      setFormData(prev => ({
+        ...prev, address: '', city: '', pincode: '', fullName: user?.name || '', phone: user?.phone || ''
+      }));
+    } else {
+      const addr = user?.addresses?.find((a: any) => a.id === id);
+      if (addr) {
+        setFormData({
+          fullName: addr.fullName,
+          address: addr.address,
+          city: addr.city,
+          pincode: addr.pincode,
+          phone: addr.phone,
+          email: user?.email || '',
+        });
+      }
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) {
@@ -46,12 +99,10 @@ export default function Checkout() {
     }
 
     setIsProcessing(true);
-    const formData = new FormData(e.currentTarget);
-    const shippingDetails = Object.fromEntries(
-      Array.from(formData.entries()).map(([k, v]) => [k, v.toString()])
-    ) as Record<string, string>;
-    const paymentMethod = formData.get('payment') as string;
+    const formElementData = new FormData(e.currentTarget);
+    const paymentMethod = formElementData.get('payment') as string;
     const cartItemsInput = cart.map(item => ({ id: item.id, quantity: item.quantity }));
+    const shippingDetails = { ...formData };
 
     if (paymentMethod === 'online') {
       try {
@@ -68,8 +119,13 @@ export default function Checkout() {
           name: 'Varam Organics',
           description: 'Premium Cold-Pressed Oils',
           order_id: order.id,
-          handler: () => { showToast('Payment successful!'); router.push('/order-success'); },
-          prefill: { name: user.name, email: user.email, contact: shippingDetails.phone as string },
+          handler: async () => { 
+            showToast('Payment successful!'); 
+            clearCart();
+            await refreshOrders();
+            router.push('/order-success'); 
+          },
+          prefill: { name: shippingDetails.fullName, email: shippingDetails.email, contact: shippingDetails.phone },
           theme: { color: '#2d5016' },
         };
         const rzp = new window.Razorpay(options);
@@ -81,9 +137,22 @@ export default function Checkout() {
         setIsProcessing(false);
       }
     } else {
-      showToast('COD order placed successfully!');
-      router.push('/order-success');
-      setIsProcessing(false);
+      try {
+        const { success, error } = await createCODOrder(cartItemsInput, user.id, shippingDetails);
+        if (!success) {
+          showToast(`Failed to place COD order: ${error}`);
+          setIsProcessing(false);
+          return;
+        }
+        showToast('COD order placed successfully!');
+        clearCart();
+        await refreshOrders();
+        router.push('/order-success');
+      } catch {
+        showToast('Error placing order.');
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -104,7 +173,48 @@ export default function Checkout() {
           <div className="flex-grow space-y-6">
             <form id="checkout-form" onSubmit={handleCheckout}>
 
-              {/* Shipping */}
+              {/* Saved Addresses Selection */}
+              {user?.addresses && user.addresses.length > 0 && (
+                <div className="bg-white border border-[#ede0cc] p-8 mb-6">
+                  <h2 className="font-[Cormorant_Garamond] text-2xl text-[#1c1c1c] mb-5 flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-[#c9a84c]" strokeWidth={1.8} />
+                    Select Delivery Address
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.addresses.map((addr: any) => (
+                      <div 
+                        key={addr.id}
+                        onClick={() => handleAddressSelect(addr.id)}
+                        className={`p-4 border cursor-pointer transition-all ${
+                          selectedAddressId === addr.id 
+                            ? 'border-[#2d5016] bg-[#2d5016]/5' 
+                            : 'border-[#ede0cc] hover:border-[#2d5016]/30'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-bold text-[#1c1c1c] text-sm uppercase tracking-wider">{addr.label}</h3>
+                          {addr.isDefault && <span className="text-[9px] font-bold tracking-widest text-[#c9a84c] uppercase bg-[#c9a84c]/10 px-2 py-0.5 rounded">Default</span>}
+                        </div>
+                        <p className="text-sm text-[#5a5a5a]">{addr.fullName}</p>
+                        <p className="text-sm text-[#5a5a5a] line-clamp-1">{addr.address}</p>
+                        <p className="text-sm text-[#5a5a5a]">{addr.city} - {addr.pincode}</p>
+                      </div>
+                    ))}
+                    <div 
+                      onClick={() => handleAddressSelect('new')}
+                      className={`p-4 border cursor-pointer transition-all flex items-center justify-center min-h-[120px] ${
+                        selectedAddressId === 'new' 
+                          ? 'border-[#2d5016] bg-[#2d5016]/5' 
+                          : 'border-[#ede0cc] hover:border-[#2d5016]/30'
+                      }`}
+                    >
+                      <span className="font-bold text-[#2d5016] text-sm uppercase tracking-wider">+ Use New Address</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Shipping Form */}
               <div className="bg-white border border-[#ede0cc] p-8 mb-6">
                 <h2 className="font-[Cormorant_Garamond] text-2xl text-[#1c1c1c] mb-7 flex items-center gap-3">
                   <Package className="h-5 w-5 text-[#c9a84c]" strokeWidth={1.8} />
@@ -113,27 +223,27 @@ export default function Checkout() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="md:col-span-2">
                     <label className={labelCls}>Full Name</label>
-                    <input type="text" name="fullName" required defaultValue={user?.name || ''} className={inputCls} />
+                    <input type="text" name="fullName" required value={formData.fullName} onChange={handleInputChange} className={inputCls} />
                   </div>
                   <div className="md:col-span-2">
                     <label className={labelCls}>Street Address</label>
-                    <input type="text" name="address" required placeholder="House/Flat number and street name" className={inputCls} />
+                    <input type="text" name="address" required value={formData.address} onChange={handleInputChange} placeholder="House/Flat number and street name" className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>City</label>
-                    <input type="text" name="city" required className={inputCls} />
+                    <input type="text" name="city" required value={formData.city} onChange={handleInputChange} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>PIN Code</label>
-                    <input type="text" name="pincode" required pattern="[0-9]{6}" className={inputCls} />
+                    <input type="text" name="pincode" required value={formData.pincode} onChange={handleInputChange} pattern="[0-9]{6}" className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Phone Number</label>
-                    <input type="tel" name="phone" required defaultValue={user?.phone || ''} className={inputCls} />
+                    <input type="tel" name="phone" required value={formData.phone} onChange={handleInputChange} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Email Address</label>
-                    <input type="email" name="email" required defaultValue={user?.email || ''} className={inputCls} />
+                    <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className={inputCls} />
                   </div>
                 </div>
               </div>
@@ -161,7 +271,7 @@ export default function Checkout() {
                       <span className="font-medium text-[#1c1c1c]">Cash on Delivery</span>
                       <div className="flex items-center gap-1 mt-0.5">
                         <Info className="h-3 w-3 text-[#8a8a8a]" />
-                        <span className="text-[10px] text-[#8a8a8a]">OTP verification required at delivery</span>
+                        <span className="text-[10px] text-[#8a8a8a]">Pay when order arrives</span>
                       </div>
                     </div>
                   </label>

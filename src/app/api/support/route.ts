@@ -16,6 +16,7 @@ const ticketSchema = z.object({
   subject: z.string().min(5).max(200),
   message: z.string().min(10).max(2000),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  user_id: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -45,7 +46,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (e: any) {
-    console.error('Support ticket submission error:', e.message);
-    return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
+    console.warn('Support ticket submission error:', e.message);
+    const isSchemaError = e.message?.includes('relation') || e.message?.includes('schema cache') || e.message?.includes('table');
+    const userMsg = isSchemaError 
+      ? 'Database Support Ticket table is not initialized. Please run 001_admin_schema.sql in your Supabase SQL editor.' 
+      : 'Failed to submit ticket. Please try again.';
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
 }

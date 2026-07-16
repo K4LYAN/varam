@@ -49,9 +49,11 @@ interface AppContextType {
   user: User | null;
   orders: Order[];
   toastMessage: string;
+  authLoading: boolean;
   addToCart: (product: Product) => void;
   updateCartQuantity: (id: number, delta: number) => void;
   removeFromCart: (id: number) => void;
+  clearCart: () => void;
   getCartTotal: () => number;
   getCartCount: () => number;
   handleLogin: (user: Partial<User>) => void;
@@ -60,6 +62,7 @@ interface AppContextType {
   updateAddresses: (addresses: Address[]) => void;
   updateSettings: (settings: Partial<SecuritySettings>) => void;
   addOrder: (order: Order) => void;
+  refreshOrders: () => Promise<void>;
   showToast: (message: string) => void;
 }
 
@@ -67,14 +70,64 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartLoaded, setIsCartLoaded] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [toastMessage, setToastMessage] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // 1. Sync cart from/to LocalStorage safely (preventing Next.js hydration issues)
+  useEffect(() => {
+    const savedCart = localStorage.getItem('varam_cart');
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error('Failed to parse cart from localStorage:', e);
+      }
+    }
+    setIsCartLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (isCartLoaded) {
+      localStorage.setItem('varam_cart', JSON.stringify(cart));
+    }
+  }, [cart, isCartLoaded]);
+
+  // Fetch helper for orders
+  const fetchUserOrders = async (userId: string) => {
+    const { data: dbOrders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (dbOrders && !error) {
+      const formattedOrders: Order[] = dbOrders.map(o => ({
+        id: o.id,
+        date: new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        items: o.items || [],
+        total: o.total_amount,
+        shipping: o.shipping_address || {},
+        status: o.payment_status === 'paid' ? o.fulfillment_status : o.payment_status
+      }));
+      setOrders(formattedOrders);
+    }
+  };
+
+  // Expose a function to refresh orders programmatically
+  const refreshOrders = async () => {
+    if (user?.id) {
+      await fetchUserOrders(user.id);
+    }
+  };
 
   // Listen to Supabase Auth state
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        setAuthLoading(true);
         if (session?.user) {
           // Read from user_metadata (or use defaults)
           const meta = session.user.user_metadata;
@@ -94,30 +147,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             settings: userSettings
           });
 
-          // Fetch orders for this user
-          const fetchOrders = async () => {
-            const { data: dbOrders, error } = await supabase
-              .from('orders')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .order('created_at', { ascending: false });
-              
-            if (dbOrders && !error) {
-              const formattedOrders: Order[] = dbOrders.map(o => ({
-                id: o.id,
-                date: new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-                items: o.items || [],
-                total: o.total_amount,
-                shipping: o.shipping_address || {},
-                status: o.payment_status === 'paid' ? o.fulfillment_status : o.payment_status
-              }));
-              setOrders(formattedOrders);
-            }
-          };
-          fetchOrders();
+          await fetchUserOrders(session.user.id);
         } else {
           setUser(null);
         }
+        setAuthLoading(false);
       }
     );
 
@@ -154,6 +188,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const removeFromCart = (id: number) => {
     setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearCart = () => {
+    setCart([]);
   };
 
   const getCartTotal = () => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -219,11 +257,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AppContext.Provider value={{
-      cart, user, orders, toastMessage,
-      addToCart, updateCartQuantity, removeFromCart,
+      cart, user, orders, toastMessage, authLoading,
+      addToCart, updateCartQuantity, removeFromCart, clearCart,
       getCartTotal, getCartCount,
       handleLogin, handleRegister, handleLogout, 
-      updateAddresses, updateSettings, addOrder, showToast
+      updateAddresses, updateSettings, addOrder, refreshOrders, showToast
     }}>
       {children}
     </AppContext.Provider>
