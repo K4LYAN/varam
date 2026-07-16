@@ -22,7 +22,8 @@ const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
 function Badge({ label, color }: { label: string; color: string }) {
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color, background: `${color}18`, borderRadius: 20, padding: '3px 10px', border: `1px solid ${color}30` }}>
+    <span className="admin-badge" style={{ color, background: `${color}10` }}>
+      <span className="admin-pulse-dot" />
       {label.replace('_', ' ')}
     </span>
   );
@@ -67,7 +68,7 @@ export default function AdminSupportPage() {
   };
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 1200 }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 36px)', maxWidth: 1200 }}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#1a2e1f', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 8, padding: '12px 22px', color: '#f5e9c0', fontSize: 13, fontWeight: 500, zIndex: 9999, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
           {toast}
@@ -96,9 +97,8 @@ export default function AdminSupportPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {tickets.map(t => (
             <div key={t.id}
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 10, padding: '16px 20px', cursor: 'pointer', transition: 'border-color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,168,76,0.3)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,168,76,0.12)'}
+              className="admin-card"
+              style={{ padding: '16px 20px', cursor: 'pointer' }}
               onClick={() => { setSelected(t); setReply(t.admin_reply ?? ''); }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -144,7 +144,7 @@ export default function AdminSupportPage() {
             </div>
 
             {/* Customer Message */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 10, padding: 16 }}>
+            <div className="admin-card" style={{ padding: 16 }}>
               <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Subject</div>
               <div style={{ color: '#f5e9c0', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{selected.subject}</div>
               <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Message</div>

@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { ArrowRight, ShieldCheck, Leaf, Award, Heart, Star, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PRODUCTS } from '../data/products';
 import { useAppContext } from '../context/AppContext';
+import { supabase } from '../utils/supabase/client';
 
 const TESTIMONIALS = [
   { name: 'Priya S.', location: 'Chennai', text: 'The sesame oil transformed my cooking. I can taste the difference immediately — rich, nutty, and absolutely pure.', rating: 5 },
@@ -14,8 +16,40 @@ const TESTIMONIALS = [
 
 export default function Home() {
   const { addToCart } = useAppContext();
+  const [productsList, setProductsList] = useState<any[]>(PRODUCTS);
 
-  const featuredProducts = PRODUCTS.slice(0, 3);
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const mapped = data.map(p => ({
+            id: Number(p.id),
+            name: p.name,
+            price: p.price,
+            volume: p.volume,
+            category: p.category,
+            description: p.description,
+            image: p.image,
+            imageColor: p.image_color || 'bg-[#FAF8F5]',
+            accentColor: p.accent_color || 'text-[#8B5A2B]',
+            benefits: p.benefits || [],
+          }));
+          setProductsList(mapped);
+        }
+      } catch (err: any) {
+        console.warn('Could not load products from database, using static fallback:', err.message);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const featuredProducts = productsList.slice(0, 3);
 
   return (
     <div className="overflow-x-hidden">

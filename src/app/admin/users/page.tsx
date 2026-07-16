@@ -55,7 +55,7 @@ export default function AdminUsersPage() {
   );
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 1200 }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 36px)', maxWidth: 1200 }}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#1a2e1f', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 8, padding: '12px 22px', color: '#f5e9c0', fontSize: 13, fontWeight: 500, zIndex: 9999, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
           {toast}
@@ -81,84 +81,82 @@ export default function AdminUsersPage() {
           <Loader2 size={28} color="#c9a84c" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       ) : (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 12, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
-                {['User', 'Status', 'Joined', 'Last Login', 'Role', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(245,233,192,0.3)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(u => (
-                <tr key={u.id}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                >
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '1.5px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a84c', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-                        {(u.name || u.email || '?').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{ color: '#f5e9c0', fontSize: 13, fontWeight: 600 }}>{u.name || '—'}</div>
-                        <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 11 }}>{u.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    {u.banned
-                      ? <span style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.1)', borderRadius: 20, padding: '3px 10px', border: '1px solid rgba(239,68,68,0.3)' }}>Banned</span>
-                      : u.email_confirmed_at
-                        ? <span style={{ fontSize: 10, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', borderRadius: 20, padding: '3px 10px', border: '1px solid rgba(34,197,94,0.3)' }}>Verified</span>
-                        : <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', borderRadius: 20, padding: '3px 10px', border: '1px solid rgba(245,158,11,0.3)' }}>Unverified</span>
-                    }
-                  </td>
-                  <td style={{ padding: '14px 16px', color: 'rgba(245,233,192,0.45)', fontSize: 11 }}>
-                    {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td style={{ padding: '14px 16px', color: 'rgba(245,233,192,0.45)', fontSize: 11 }}>
-                    {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <button
-                      onClick={() => patch(u.id, { is_admin: !u.is_admin })}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: u.is_admin ? 'rgba(201,168,76,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${u.is_admin ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: u.is_admin ? '#c9a84c' : 'rgba(245,233,192,0.4)', fontSize: 11, fontWeight: 600 }}
-                    >
-                      {u.is_admin ? <ShieldCheck size={13} /> : <Shield size={13} />}
-                      {u.is_admin ? 'Admin' : 'User'}
-                    </button>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => patch(u.id, { ban: !u.banned })}
-                        title={u.banned ? 'Unban user' : 'Ban user'}
-                        style={{ background: u.banned ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${u.banned ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)'}`, borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: u.banned ? '#22c55e' : '#ef4444', display: 'flex', alignItems: 'center' }}
-                      >
-                        {u.banned ? <UserCheck size={13} /> : <UserX size={13} />}
-                      </button>
-                      {deleteConfirm === u.id ? (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => handleDelete(u.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#ef4444', fontSize: 11, fontWeight: 700 }}>Delete</button>
-                          <button onClick={() => setDeleteConfirm(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: 'rgba(245,233,192,0.5)', fontSize: 11 }}>Cancel</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setDeleteConfirm(u.id)} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+        <div className="admin-card" style={{ overflow: 'hidden' }}>
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  {['User', 'Status', 'Joined', 'Last Login', 'Role', 'Actions'].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', color: 'rgba(245,233,192,0.25)', fontSize: 13 }}>No users found</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(u => (
+                  <tr key={u.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(201,168,76,0.15)', border: '1.5px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a84c', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                          {(u.name || u.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ color: '#f5e9c0', fontSize: 13, fontWeight: 600 }}>{u.name || '—'}</div>
+                          <div style={{ color: 'rgba(245,233,192,0.4)', fontSize: 11 }}>{u.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {u.banned
+                        ? <span className="admin-badge" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}><span className="admin-pulse-dot" />Banned</span>
+                        : u.email_confirmed_at
+                          ? <span className="admin-badge" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.1)' }}><span className="admin-pulse-dot" />Verified</span>
+                          : <span className="admin-badge" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}><span className="admin-pulse-dot" />Unverified</span>
+                      }
+                    </td>
+                    <td style={{ color: 'rgba(245,233,192,0.45)', fontSize: 11 }}>
+                      {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td style={{ color: 'rgba(245,233,192,0.45)', fontSize: 11 }}>
+                      {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => patch(u.id, { is_admin: !u.is_admin })}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: u.is_admin ? 'rgba(201,168,76,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${u.is_admin ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: u.is_admin ? '#c9a84c' : 'rgba(245,233,192,0.4)', fontSize: 11, fontWeight: 600 }}
+                      >
+                        {u.is_admin ? <ShieldCheck size={13} /> : <Shield size={13} />}
+                        {u.is_admin ? 'Admin' : 'User'}
+                      </button>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => patch(u.id, { ban: !u.banned })}
+                          title={u.banned ? 'Unban user' : 'Ban user'}
+                          style={{ background: u.banned ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${u.banned ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)'}`, borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: u.banned ? '#22c55e' : '#ef4444', display: 'flex', alignItems: 'center' }}
+                        >
+                          {u.banned ? <UserCheck size={13} /> : <UserX size={13} />}
+                        </button>
+                        {deleteConfirm === u.id ? (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={() => handleDelete(u.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#ef4444', fontSize: 11, fontWeight: 700 }}>Delete</button>
+                            <button onClick={() => setDeleteConfirm(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: 'rgba(245,233,192,0.5)', fontSize: 11 }}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setDeleteConfirm(u.id)} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', color: 'rgba(245,233,192,0.25)', fontSize: 13 }}>No users found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

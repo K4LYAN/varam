@@ -21,6 +21,11 @@ export const Navbar = () => {
   // Close mobile menu on route change
   useEffect(() => { setIsMobileMenuOpen(false); }, [pathname]);
 
+  // Don't render storefront nav on admin pages
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   const isActive = (path: string) => pathname === path;
 
   const navLinks = [

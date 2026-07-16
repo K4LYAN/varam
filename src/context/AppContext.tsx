@@ -31,6 +31,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
+  emailVerified: boolean;
   addresses: Address[];
   settings: SecuritySettings;
 }
@@ -143,6 +144,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             name: meta?.name || 'User',
             email: session.user.email || '',
             phone: meta?.phone || '',
+            emailVerified: !!session.user.email_confirmed_at,
             addresses: userAddresses,
             settings: userSettings
           });

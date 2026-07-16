@@ -1,14 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient } from '../../../utils/supabase/admin';
 import { z } from 'zod';
 import { checkRateLimit, SUPPORT_RATE_LIMIT } from '../../../lib/rateLimit';
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Missing Supabase credentials');
-  return createClient(url, key);
-}
 
 const ticketSchema = z.object({
   user_name: z.string().min(2).max(80).regex(/^[a-zA-Z\s'-]+$/),

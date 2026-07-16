@@ -172,3 +172,35 @@ DROP TRIGGER IF EXISTS on_auth_user_updated ON auth.users;
 CREATE TRIGGER on_auth_user_updated
   AFTER UPDATE ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_user_update();
+
+-- ─── 11. Storage Bucket for Products ────────────────────────────
+-- Create a public storage bucket for product images if it does not exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('products', 'products', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage object policies
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+CREATE POLICY "Public Access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'products');
+
+DROP POLICY IF EXISTS "Admin Upload" ON storage.objects;
+CREATE POLICY "Admin Upload" ON storage.objects
+  FOR INSERT TO authenticated WITH CHECK (
+    bucket_id = 'products' AND 
+    (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true))
+  );
+
+DROP POLICY IF EXISTS "Admin Update" ON storage.objects;
+CREATE POLICY "Admin Update" ON storage.objects
+  FOR UPDATE TO authenticated WITH CHECK (
+    bucket_id = 'products' AND 
+    (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true))
+  );
+
+DROP POLICY IF EXISTS "Admin Delete" ON storage.objects;
+CREATE POLICY "Admin Delete" ON storage.objects
+  FOR DELETE TO authenticated USING (
+    bucket_id = 'products' AND 
+    (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true))
+  );

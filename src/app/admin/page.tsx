@@ -37,18 +37,16 @@ function StatCard({ label, value, icon: Icon, color, href, change }: any) {
   return (
     <Link href={href ?? '#'} style={{ textDecoration: 'none' }}>
       <div
+        className="admin-card"
         style={{
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)',
-          borderRadius: 12, padding: '22px 24px', cursor: href ? 'pointer' : 'default',
-          transition: 'all 0.2s ease', display: 'flex', flexDirection: 'column', gap: 12,
+          padding: '22px 24px', cursor: href ? 'pointer' : 'default',
+          display: 'flex', flexDirection: 'column', gap: 12,
         }}
-        onMouseEnter={e => { if (href) (e.currentTarget as HTMLElement).style.border = '1px solid rgba(201,168,76,0.35)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.border = '1px solid rgba(201,168,76,0.12)'; }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 10, background: `${color}18`,
-            border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <div className="admin-stat-icon-wrapper" style={{
+            width: 44, height: 44, borderRadius: 10, background: `${color}12`,
+            border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Icon size={20} color={color} />
           </div>
@@ -77,11 +75,8 @@ function StatCard({ label, value, icon: Icon, color, href, change }: any) {
 function StatusBadge({ status }: { status: string }) {
   const color = STATUS_COLOR[status] ?? '#8a8a7a';
   return (
-    <span style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-      color, background: `${color}18`, borderRadius: 20, padding: '3px 10px',
-      border: `1px solid ${color}30`,
-    }}>
+    <span className="admin-badge" style={{ color, background: `${color}10` }}>
+      <span className="admin-pulse-dot" />
       {status}
     </span>
   );
@@ -139,7 +134,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 1200 }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 36px)', maxWidth: 1200 }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: 'Cormorant Garamond, serif', color: '#f5e9c0', fontSize: 32, fontWeight: 500, margin: 0, lineHeight: 1 }}>
@@ -160,9 +155,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main content grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24 }}>
+      <div className="admin-dashboard-grid">
         {/* Recent Orders */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 12, overflow: 'hidden' }}>
+        <div className="admin-card" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(201,168,76,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ color: '#f5e9c0', fontSize: 15, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <ShoppingBag size={16} color="#c9a84c" /> Recent Orders
@@ -171,41 +166,36 @@ export default function AdminDashboard() {
               View all <ArrowRight size={12} />
             </Link>
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="admin-table-container">
             {stats?.recentOrders?.length === 0 ? (
               <div style={{ padding: '40px 24px', textAlign: 'center', color: 'rgba(245,233,192,0.3)', fontSize: 13 }}>
                 No orders yet
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="admin-table">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
+                  <tr>
                     {['Order ID', 'Customer', 'Amount', 'Status', 'Date'].map(h => (
-                      <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: 'rgba(245,233,192,0.3)', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                        {h}
-                      </th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {stats?.recentOrders.map((order: any) => (
-                    <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                    >
-                      <td style={{ padding: '12px 16px', color: '#f5e9c0', fontSize: 12, fontFamily: 'monospace' }}>
+                    <tr key={order.id}>
+                      <td style={{ color: '#f5e9c0', fontSize: 12, fontFamily: 'monospace' }}>
                         {order.id.slice(0, 8)}…
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'rgba(245,233,192,0.7)', fontSize: 12 }}>
+                      <td style={{ color: 'rgba(245,233,192,0.7)', fontSize: 12 }}>
                         {order.user_email ?? '—'}
                       </td>
-                      <td style={{ padding: '12px 16px', color: '#f5e9c0', fontSize: 13, fontWeight: 600 }}>
+                      <td style={{ color: '#f5e9c0', fontSize: 13, fontWeight: 600 }}>
                         ₹{(order.total_amount ?? 0).toLocaleString('en-IN')}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td>
                         <StatusBadge status={order.fulfillment_status} />
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'rgba(245,233,192,0.4)', fontSize: 11 }}>
+                      <td style={{ color: 'rgba(245,233,192,0.4)', fontSize: 11 }}>
                         {new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                       </td>
                     </tr>
@@ -219,7 +209,7 @@ export default function AdminDashboard() {
         {/* Right column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {/* Order Status Breakdown */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 12, padding: 24 }}>
+          <div className="admin-card" style={{ padding: 24 }}>
             <h2 style={{ color: '#f5e9c0', fontSize: 15, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
               <AlertCircle size={16} color="#c9a84c" /> Order Status
             </h2>
@@ -244,7 +234,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Open Support Tickets */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 12, padding: 24 }}>
+          <div className="admin-card" style={{ padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ color: '#f5e9c0', fontSize: 15, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <MessageSquare size={16} color="#ef4444" /> Open Tickets

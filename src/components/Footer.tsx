@@ -2,8 +2,15 @@
 
 import { Leaf, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export const Footer = () => {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <footer className="bg-[#111a0f] text-white relative overflow-hidden">
       {/* Top accent line */}

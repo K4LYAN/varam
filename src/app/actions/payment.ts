@@ -1,17 +1,9 @@
 'use server';
 
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '../../utils/supabase/server';
+import { getAdminClient } from '../../utils/supabase/admin';
 import { z } from 'zod';
 import Razorpay from 'razorpay';
-
-// ─── Admin client (service role — server only) ───────────────
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Missing Supabase admin credentials');
-  return createSupabaseClient(url, key);
-}
 
 // ─── Shipping input schema ───────────────────────────────────
 const shippingSchema = z.object({

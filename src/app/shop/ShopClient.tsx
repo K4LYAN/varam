@@ -1,19 +1,53 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
 import { PRODUCTS } from '../../data/products';
+import type { Product } from '../../data/products';
 import { useAppContext } from '../../context/AppContext';
-
-const CATEGORIES = ['All', 'Everyday Cooking', 'Heritage Collection', 'Versatile Essential', 'Robust Flavor', 'Wellness & Care', 'Premium Beauty'];
+import { supabase } from '../../utils/supabase/client';
 
 export default function ShopClient() {
   const { addToCart } = useAppContext();
+  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS);
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
 
-  const filtered = PRODUCTS.filter(p => {
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const mapped: Product[] = data.map(p => ({
+            id: Number(p.id),
+            name: p.name,
+            price: p.price,
+            volume: p.volume,
+            category: p.category,
+            description: p.description,
+            image: p.image,
+            imageColor: p.image_color || 'bg-[#FAF8F5]',
+            accentColor: p.accent_color || 'text-[#8B5A2B]',
+            benefits: p.benefits || []
+          }));
+          setProductsList(mapped);
+        }
+      } catch (err: any) {
+        console.warn('Could not load products from database, using static fallback:', err.message);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const categories = ['All', ...Array.from(new Set(productsList.map(p => p.category)))];
+
+  const filtered = productsList.filter(p => {
     const matchCat = activeCategory === 'All' || p.category === activeCategory;
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
@@ -51,7 +85,7 @@ export default function ShopClient() {
 
           {/* Category tabs */}
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}

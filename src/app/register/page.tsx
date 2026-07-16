@@ -81,25 +81,40 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormValues) => {
     setAuthError('');
 
-    const { error } = await supabase.auth.signUp({
-      email: data.email.trim().toLowerCase(),
-      password: data.password,
-      options: {
-        data: { name: data.name.trim() },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const { data: signUpData, error } = await supabase.auth.signUp({
+        email: data.email.trim().toLowerCase(),
+        password: data.password,
+        options: {
+          data: { name: data.name.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        setAuthError('An account with this email already exists. Try signing in instead.');
-      } else {
-        setAuthError(error.message);
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          setAuthError('An account with this email already exists. Try signing in instead.');
+        } else if (error.message.includes('rate limit') || error.status === 429) {
+          setAuthError('Too many attempts. Please wait a few minutes and try again.');
+        } else if (error.message.includes('weak_password') || error.message.includes('password')) {
+          setAuthError('Password does not meet security requirements. Please choose a stronger password.');
+        } else {
+          setAuthError(error.message);
+        }
+        return;
       }
-      return;
-    }
 
-    setEmailSent(true);
+      // Supabase anti-enumeration: if email already exists with "Confirm email" enabled,
+      // signUp returns a fake user object with no identities instead of an error.
+      if (signUpData?.user && signUpData.user.identities?.length === 0) {
+        setAuthError('An account with this email already exists. Try signing in instead.');
+        return;
+      }
+
+      setEmailSent(true);
+    } catch (err) {
+      setAuthError('An unexpected error occurred. Please try again.');
+    }
   };
 
   /* ── Email-sent confirmation screen ──────────────── */

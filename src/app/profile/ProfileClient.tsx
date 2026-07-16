@@ -51,6 +51,11 @@ export default function ProfileClient() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [passError, setPassError] = useState('');
+  const [passSuccess, setPassSuccess] = useState('');
+  const [verifyEmailLoading, setVerifyEmailLoading] = useState(false);
+  const [verifyEmailMsg, setVerifyEmailMsg] = useState('');
+  const [showCurrentPassReveal, setShowCurrentPassReveal] = useState(false);
+  const [showNewPassReveal, setShowNewPassReveal] = useState(false);
 
   // Support states & hooks
   const [tickets, setTickets] = useState<any[]>([]);
@@ -160,16 +165,44 @@ export default function ProfileClient() {
 
   const onChangePassword = async (data: PasswordFormValues) => {
     setPassError('');
-    const { error } = await supabase.auth.updateUser({
-      password: data.newPassword
-    });
+    setPassSuccess('');
+    if (!user) return;
 
+    // Re-authenticate first with current password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: data.currentPassword,
+    });
+    if (signInError) {
+      setPassError('Current password is incorrect. Please try again.');
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: data.newPassword });
     if (error) {
       setPassError(error.message);
     } else {
+      setPassSuccess('Password updated successfully.');
       showToast('Password updated securely.');
       setShowPasswordFields(false);
       resetPass();
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    if (!user) return;
+    setVerifyEmailLoading(true);
+    setVerifyEmailMsg('');
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: user.email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setVerifyEmailLoading(false);
+    if (error) {
+      setVerifyEmailMsg('Failed to resend. Please try again later.');
+    } else {
+      setVerifyEmailMsg('Verification email sent! Check your inbox.');
     }
   };
 
@@ -222,8 +255,12 @@ export default function ProfileClient() {
                   </div>
                   <div className="overflow-hidden">
                      <h3 className="font-serif text-[#1A1A1A] text-lg truncate">{user.name}</h3>
-                     <p className="text-xs text-[#666666] truncate mt-1 flex items-center">
-                       <ShieldCheck className="h-3 w-3 mr-1 text-[#2C4C3B]" /> Verified
+                     <p className="text-xs truncate mt-1 flex items-center gap-1">
+                       {user.emailVerified ? (
+                         <><ShieldCheck className="h-3 w-3 text-[#2C4C3B]" /><span className="text-[#2C4C3B] font-semibold">Email Verified</span></>
+                       ) : (
+                         <><AlertCircle className="h-3 w-3 text-amber-500" /><span className="text-amber-600 font-semibold">Verify Email</span></>
+                       )}
                      </p>
                   </div>
                </div>
@@ -609,9 +646,50 @@ export default function ProfileClient() {
                                  </div>
                                  <div>
                                    <label className="block text-xs font-bold text-[#666666] uppercase mb-1">Email Address</label>
-                                   <input type="email" disabled value={user.email} className="w-full p-3 bg-[#FAF8F5] border border-[#E5E5E5] text-sm text-[#666666] cursor-not-allowed rounded-sm" />
+                                   <div className="relative">
+                                     <input type="email" disabled value={user.email} className="w-full p-3 bg-[#FAF8F5] border border-[#E5E5E5] text-sm text-[#666666] cursor-not-allowed rounded-sm pr-28" />
+                                     {user.emailVerified ? (
+                                       <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[#2C4C3B] text-[10px] font-bold uppercase">
+                                         <ShieldCheck className="h-3.5 w-3.5" /> Verified
+                                       </span>
+                                     ) : (
+                                       <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-amber-600 text-[10px] font-bold uppercase">
+                                         <AlertCircle className="h-3.5 w-3.5" /> Unverified
+                                       </span>
+                                     )}
+                                   </div>
                                  </div>
-                                 <p className="text-[10px] text-[#999999] italic">Contact support to change these details.</p>
+
+                                 {/* Email Verification Banner */}
+                                 {!user.emailVerified && (
+                                   <div className="bg-amber-50 border border-amber-200 rounded-sm p-4">
+                                     <p className="text-amber-800 text-sm font-medium mb-3 flex items-start gap-2">
+                                       <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                       Your email is not verified. Verify it to secure your account and enable all features.
+                                     </p>
+                                     <button
+                                       onClick={resendVerificationEmail}
+                                       disabled={verifyEmailLoading}
+                                       className="text-xs font-bold uppercase tracking-wider text-white bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-sm transition-colors disabled:opacity-60"
+                                     >
+                                       {verifyEmailLoading ? 'Sending…' : 'Resend Verification Email'}
+                                     </button>
+                                     {verifyEmailMsg && (
+                                       <p className={`text-xs mt-2 font-medium ${verifyEmailMsg.includes('sent') ? 'text-green-700' : 'text-red-600'}`}>
+                                         {verifyEmailMsg}
+                                       </p>
+                                     )}
+                                   </div>
+                                 )}
+
+                                 {user.emailVerified && (
+                                   <div className="bg-green-50 border border-green-200 rounded-sm p-3 flex items-center gap-2">
+                                     <ShieldCheck className="h-4 w-4 text-green-700 shrink-0" />
+                                     <p className="text-green-800 text-xs font-medium">Your email is verified. Your account is secure.</p>
+                                   </div>
+                                 )}
+
+                                 <p className="text-[10px] text-[#999999] italic">Contact support to update your name or email address.</p>
                                </div>
                             </div>
 
@@ -620,36 +698,50 @@ export default function ProfileClient() {
                                <h4 className="text-sm font-bold uppercase tracking-wider text-[#1A1A1A] mb-4 flex items-center">
                                  <ShieldCheck className="h-4 w-4 mr-2" /> Authentication
                                </h4>
-                               
+                               {passSuccess && <p className="text-green-600 text-xs font-medium bg-green-50 border border-green-200 p-2 rounded mb-3">{passSuccess}</p>}
                                {!showPasswordFields ? (
                                  <button onClick={() => setShowPasswordFields(true)} className="w-full mb-6 p-4 border border-[#E5E5E5] hover:border-[#2C4C3B] text-left rounded-sm transition-colors flex justify-between items-center group">
                                    <div>
                                      <span className="block text-sm font-bold text-[#1A1A1A] mb-1">Change Password</span>
-                                     <span className="block text-xs text-[#666666]">Update your password securely</span>
+                                     <span className="block text-xs text-[#666666]">We verify your current password before any changes</span>
                                    </div>
                                    <ChevronRight className="h-5 w-5 text-[#cccccc] group-hover:text-[#2C4C3B] transition-colors" />
                                  </button>
                                ) : (
-                                 <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handlePassSubmit(onChangePassword)} className="mb-6 p-4 border border-[#E5E5E5] rounded-sm bg-[#FAF8F5] space-y-4">
-                                    {passError && <p className="text-red-500 text-xs font-bold bg-red-50 p-2 border border-red-200 rounded">{passError}</p>}
+                                 <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handlePassSubmit(onChangePassword)} className="mb-6 p-5 border border-[#E5E5E5] rounded-sm bg-[#FAF8F5] space-y-4">
+                                    <p className="text-xs text-[#555] bg-white border border-[#E5E5E5] p-3 rounded-sm flex items-center gap-2">
+                                      <ShieldCheck className="h-4 w-4 text-[#2C4C3B] shrink-0" />
+                                      Your current password will be verified before updating.
+                                    </p>
+                                    {passError && <p className="text-red-600 text-xs font-bold bg-red-50 p-2 border border-red-200 rounded">{passError}</p>}
                                     <div>
                                       <label className="block text-xs font-bold text-[#666666] uppercase mb-1">Current Password</label>
-                                      <input type="password" {...regPass('currentPassword')} className="w-full p-3 border border-[#E5E5E5] focus:border-[#2C4C3B] outline-none text-sm rounded-sm" />
+                                      <div className="relative">
+                                        <input type={showCurrentPassReveal ? 'text' : 'password'} {...regPass('currentPassword')} className="w-full p-3 border border-[#E5E5E5] focus:border-[#2C4C3B] outline-none text-sm rounded-sm pr-12" placeholder="Enter current password" />
+                                        <button type="button" onClick={() => setShowCurrentPassReveal(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aaa] hover:text-[#333] transition-colors" aria-label="Toggle password visibility">
+                                          {showCurrentPassReveal ? '🙈' : '👁'}
+                                        </button>
+                                      </div>
                                       {errPass.currentPassword && <p className="text-red-500 text-xs mt-1">{errPass.currentPassword.message}</p>}
                                     </div>
                                     <div>
                                       <label className="block text-xs font-bold text-[#666666] uppercase mb-1">New Password</label>
-                                      <input type="password" {...regPass('newPassword')} className="w-full p-3 border border-[#E5E5E5] focus:border-[#2C4C3B] outline-none text-sm rounded-sm" />
+                                      <div className="relative">
+                                        <input type={showNewPassReveal ? 'text' : 'password'} {...regPass('newPassword')} className="w-full p-3 border border-[#E5E5E5] focus:border-[#2C4C3B] outline-none text-sm rounded-sm pr-12" placeholder="Min 8 chars, uppercase, number" />
+                                        <button type="button" onClick={() => setShowNewPassReveal(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aaa] hover:text-[#333] transition-colors" aria-label="Toggle password visibility">
+                                          {showNewPassReveal ? '🙈' : '👁'}
+                                        </button>
+                                      </div>
                                       {errPass.newPassword && <p className="text-red-500 text-xs mt-1">{errPass.newPassword.message}</p>}
                                     </div>
                                     <div>
                                       <label className="block text-xs font-bold text-[#666666] uppercase mb-1">Confirm New Password</label>
-                                      <input type="password" {...regPass('confirmPassword')} className="w-full p-3 border border-[#E5E5E5] focus:border-[#2C4C3B] outline-none text-sm rounded-sm" />
+                                      <input type="password" {...regPass('confirmPassword')} className="w-full p-3 border border-[#E5E5E5] focus:border-[#2C4C3B] outline-none text-sm rounded-sm" placeholder="Re-enter new password" />
                                       {errPass.confirmPassword && <p className="text-red-500 text-xs mt-1">{errPass.confirmPassword.message}</p>}
                                     </div>
                                     <div className="flex justify-end space-x-3 pt-2">
-                                      <button type="button" onClick={() => { setShowPasswordFields(false); resetPass(); }} className="text-xs font-bold uppercase text-[#666666] hover:text-[#1A1A1A]">Cancel</button>
-                                      <button type="submit" className="bg-[#2C4C3B] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm hover:bg-[#1A3025]">Update Password</button>
+                                      <button type="button" onClick={() => { setShowPasswordFields(false); resetPass(); setPassError(''); setPassSuccess(''); }} className="text-xs font-bold uppercase text-[#666666] hover:text-[#1A1A1A]">Cancel</button>
+                                      <button type="submit" className="bg-[#2C4C3B] text-white text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-sm hover:bg-[#1A3025] transition-colors">Update Password</button>
                                     </div>
                                  </motion.form>
                                )}

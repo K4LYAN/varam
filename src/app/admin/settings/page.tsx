@@ -23,7 +23,7 @@ const DEFAULT: Settings = {
 
 function Section({ title, icon: Icon, children }: any) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+    <div className="admin-card" style={{ overflow: 'hidden', marginBottom: 24 }}>
       <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(201,168,76,0.08)', display: 'flex', alignItems: 'center', gap: 10 }}>
         <Icon size={16} color="#c9a84c" />
         <h2 style={{ color: '#f5e9c0', fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h2>
@@ -90,7 +90,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 780 }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 36px)', maxWidth: 780 }}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#1a2e1f', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 8, padding: '12px 22px', color: '#f5e9c0', fontSize: 13, fontWeight: 500, zIndex: 9999, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
           {toast}

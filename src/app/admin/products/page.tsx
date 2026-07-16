@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight, X, Loader2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight, X, Loader2, Package, Upload } from 'lucide-react';
+import { supabase } from '../../../utils/supabase/client';
 
 interface Product {
   id: number;
@@ -77,6 +78,38 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [toast, setToast] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `product_images/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      setForm(prev => ({ ...prev, image: publicUrl }));
+      showToast('Image uploaded successfully!');
+    } catch (err: any) {
+      console.error('Error uploading image:', err.message);
+      showToast('Image upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
@@ -145,7 +178,7 @@ export default function AdminProductsPage() {
   const s = (x: any) => ({ style: x });
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 1200 }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 36px)', maxWidth: 1200 }}>
       {/* Toast */}
       {toast && (
         <div style={{
@@ -200,77 +233,73 @@ export default function AdminProductsPage() {
           <Loader2 size={28} color="#c9a84c" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       ) : (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.12)', borderRadius: 12, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
-                {['Product', 'Category', 'Price', 'Volume', 'Stock', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(245,233,192,0.3)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.id}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                >
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Package size={16} color="#c9a84c" />
-                      </div>
-                      <div>
-                        <div style={{ color: '#f5e9c0', fontSize: 13, fontWeight: 600 }}>{p.name}</div>
-                        <div style={{ color: 'rgba(245,233,192,0.35)', fontSize: 11, marginTop: 2 }}>ID: {p.id}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px', color: 'rgba(245,233,192,0.55)', fontSize: 12 }}>{p.category}</td>
-                  <td style={{ padding: '14px 16px', color: '#f5e9c0', fontSize: 14, fontWeight: 700 }}>₹{p.price}</td>
-                  <td style={{ padding: '14px 16px', color: 'rgba(245,233,192,0.55)', fontSize: 12 }}>{p.volume}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <button onClick={() => toggleStock(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {p.in_stock
-                        ? <ToggleRight size={22} color="#22c55e" />
-                        : <ToggleLeft size={22} color="#ef4444" />
-                      }
-                      <span style={{ fontSize: 11, fontWeight: 600, color: p.in_stock ? '#22c55e' : '#ef4444' }}>
-                        {p.in_stock ? 'In Stock' : 'Out'}
-                      </span>
-                    </button>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => openEdit(p)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
-                        <Pencil size={13} />
-                      </button>
-                      {deleteConfirm === p.id ? (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => handleDelete(p.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#ef4444', fontSize: 11, fontWeight: 700 }}>Confirm</button>
-                          <button onClick={() => setDeleteConfirm(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: 'rgba(245,233,192,0.5)', fontSize: 11 }}>Cancel</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setDeleteConfirm(p.id)} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
+        <div className="admin-card" style={{ overflow: 'hidden' }}>
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', color: 'rgba(245,233,192,0.25)', fontSize: 13 }}>
-                    No products found
-                  </td>
+                  {['Product', 'Category', 'Price', 'Volume', 'Stock', 'Actions'].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Package size={16} color="#c9a84c" />
+                        </div>
+                        <div>
+                          <div style={{ color: '#f5e9c0', fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                          <div style={{ color: 'rgba(245,233,192,0.35)', fontSize: 11, marginTop: 2 }}>ID: {p.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ color: 'rgba(245,233,192,0.55)', fontSize: 12 }}>{p.category}</td>
+                    <td style={{ color: '#f5e9c0', fontSize: 14, fontWeight: 700 }}>₹{p.price}</td>
+                    <td style={{ color: 'rgba(245,233,192,0.55)', fontSize: 12 }}>{p.volume}</td>
+                    <td>
+                      <button onClick={() => toggleStock(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {p.in_stock
+                          ? <ToggleRight size={22} color="#22c55e" />
+                          : <ToggleLeft size={22} color="#ef4444" />
+                        }
+                        <span style={{ fontSize: 11, fontWeight: 600, color: p.in_stock ? '#22c55e' : '#ef4444' }}>
+                          {p.in_stock ? 'In Stock' : 'Out'}
+                        </span>
+                      </button>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => openEdit(p)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
+                          <Pencil size={13} />
+                        </button>
+                        {deleteConfirm === p.id ? (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={() => handleDelete(p.id)} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#ef4444', fontSize: 11, fontWeight: 700 }}>Confirm</button>
+                            <button onClick={() => setDeleteConfirm(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: 'rgba(245,233,192,0.5)', fontSize: 11 }}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setDeleteConfirm(p.id)} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', color: 'rgba(245,233,192,0.25)', fontSize: 13 }}>
+                      No products found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -308,8 +337,50 @@ export default function AdminProductsPage() {
               <div style={{ gridColumn: '1/-1' }}>
                 <Textarea label="Description *" value={form.description} onChange={(e: any) => setForm({ ...form, description: e.target.value })} placeholder="Product description…" />
               </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <Input label="Image Path" value={form.image} onChange={(e: any) => setForm({ ...form, image: e.target.value })} placeholder="/images/groundnut_oil.png" />
+              <div style={{ gridColumn: '1/-1', marginBottom: 14 }}>
+                <label style={{ display: 'block', color: 'rgba(245,233,192,0.5)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Product Image *
+                </label>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <input
+                    value={form.image}
+                    onChange={(e: any) => setForm({ ...form, image: e.target.value })}
+                    placeholder="/images/groundnut_oil.png or upload a file"
+                    style={{
+                      flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(201,168,76,0.2)', borderRadius: 8, color: '#f5e9c0',
+                      fontSize: 13, outline: 'none',
+                    }}
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px',
+                      background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)',
+                      borderRadius: 8, color: '#c9a84c', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                    }}
+                  >
+                    {uploading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={13} />}
+                    {uploading ? 'Uploading...' : 'Upload'}
+                  </button>
+                </div>
+                {form.image && (
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 50, height: 50, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(201,168,76,0.2)', background: 'rgba(255,255,255,0.03)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src={form.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <span style={{ fontSize: 11, color: 'rgba(245,233,192,0.4)' }}>Image Preview</span>
+                  </div>
+                )}
               </div>
               <Input label="Image BG Color Class" value={form.image_color} onChange={(e: any) => setForm({ ...form, image_color: e.target.value })} placeholder="bg-[#F3E5AB]" />
               <Input label="Accent Color Class" value={form.accent_color} onChange={(e: any) => setForm({ ...form, accent_color: e.target.value })} placeholder="text-[#8B5A2B]" />
